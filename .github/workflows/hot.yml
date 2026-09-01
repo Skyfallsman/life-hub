@@ -1,0 +1,37 @@
+name: 热搜定时抓取
+
+on:
+  schedule:
+    # UTC 时间。北京 = UTC+8。下面两条 = 北京时间 7:00–23:00 每 30 分钟跑一次
+    - cron: '0,30 23 * * *'      # 北京 07:00
+    - cron: '0,30 0-15 * * *'    # 北京 08:00–23:00
+  workflow_dispatch:              # 允许在 Actions 页面手动点一次
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write            # 需要写权限来回提交 news.json
+    steps:
+      - name: 拉取仓库
+        uses: actions/checkout@v4
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 抓取热搜
+        run: python fetch_hot.py news.json
+
+      - name: 提交更新
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add news.json
+          if git diff --staged --quiet; then
+            echo "本次无变化，跳过提交"
+          else
+            git commit -m "更新热搜 $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M')"
+            git push
+          fi

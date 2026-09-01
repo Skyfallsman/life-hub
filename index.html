@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A0E14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>日程 · Gary</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#0A0E14;--card:#141A23;--card2:#1B2230;--bd:#242C3A;--bd2:#2E3847;
+    --tx:#E8EDF5;--mut:#7D8899;--mut2:#5A6577;
+    --blue:#4A9EFF;--green:#34D399;--orange:#FB923C;--red:#F87171;
+    --purple:#A78BFA;--yellow:#FBBF24;--gray:#6B7688;
+  }
+  body{
+    background:
+      radial-gradient(900px 420px at 50% -12%, rgba(74,158,255,.13), transparent 62%),
+      radial-gradient(600px 300px at 100% 8%, rgba(167,139,250,.07), transparent 60%),
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.6;padding:16px 14px calc(32px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh}
+  .wrap{max-width:640px;margin:0 auto;width:100%}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+  .htitle{font-size:21px;font-weight:750;letter-spacing:-.4px;
+    background:linear-gradient(92deg,var(--tx),#9FB3CC);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .sub{font-size:11px;color:var(--mut2);letter-spacing:.3px;margin-top:1px}
+  #install{display:none;background:linear-gradient(135deg,var(--blue),#3B82F6);color:#04121f;border:none;
+    border-radius:10px;padding:8px 14px;font-size:12px;font-weight:750;cursor:pointer;
+    box-shadow:0 3px 14px rgba(74,158,255,.32)}
+
+  /* 今日 */
+  .today{position:relative;overflow:hidden;
+    background:linear-gradient(155deg,rgba(74,158,255,.17),rgba(74,158,255,.05) 55%,rgba(20,26,35,.6));
+    border:1px solid rgba(74,158,255,.30);border-radius:22px;padding:17px 18px;
+    box-shadow:0 6px 28px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.05)}
+  .today.hot{background:linear-gradient(155deg,rgba(248,113,113,.19),rgba(248,113,113,.05) 55%,rgba(20,26,35,.6));
+    border-color:rgba(248,113,113,.36)}
+  .today::after{content:"";position:absolute;top:-46px;right:-46px;width:130px;height:130px;border-radius:50%;
+    background:radial-gradient(circle,rgba(74,158,255,.20),transparent 68%);pointer-events:none}
+  .trow{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;position:relative;z-index:1}
+  .tdate{font-size:11.5px;color:var(--mut);letter-spacing:.5px;font-weight:600}
+  .tdd{font-size:29px;font-weight:780;letter-spacing:-.8px;line-height:1.16;margin:2px 0 11px}
+  .tdd small{font-size:13px;font-weight:600;color:var(--mut);letter-spacing:0}
+  .pbar{height:7px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden}
+  .pfill{height:100%;border-radius:6px;width:0;transition:width .55s cubic-bezier(.34,1.1,.64,1);
+    background:linear-gradient(90deg,var(--green),var(--blue));box-shadow:0 0 12px rgba(52,211,153,.45)}
+  .ptext{font-size:11.5px;color:var(--mut);margin-top:7px;display:flex;gap:14px;flex-wrap:wrap}
+  .ptext b{color:var(--tx);font-weight:700}
+  .c-red{color:var(--red)}.c-orange{color:var(--orange)}
+  .ring{width:58px;height:58px;flex-shrink:0;transform:rotate(-90deg)}
+  .ring-bg{stroke:rgba(255,255,255,.08)}
+  .ring-fg{stroke:url(#rg);stroke-linecap:round;
+    transition:stroke-dashoffset .65s cubic-bezier(.34,1.05,.64,1)}
+  .ringtx{position:absolute;right:18px;top:46px;font-size:12px;font-weight:750;color:var(--tx);
+    text-align:center;width:58px;letter-spacing:-.3px}
+  .anchorline{font-size:10.5px;color:var(--mut2);margin-top:13px;padding-top:11px;
+    border-top:1px solid rgba(255,255,255,.07);line-height:1.7;position:relative;z-index:1}
+  .anchorline b{color:var(--green);font-weight:650}
+
+  /* 周网格 */
+  h2{font-size:11.5px;font-weight:700;letter-spacing:1.1px;color:var(--mut2);
+    margin:22px 0 10px;padding-left:2px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    text-transform:uppercase}
+  h2 em{font-style:normal;font-size:11px;color:var(--mut);font-weight:600;letter-spacing:0;text-transform:none}
+  h2 .hint{font-size:10.5px;color:var(--mut2);font-weight:400;letter-spacing:0;text-transform:none}
+  .week{margin-bottom:18px}
+  .wkhead{font-size:11px;color:var(--mut2);font-weight:700;letter-spacing:.7px;margin:0 0 8px 2px}
+  .days{display:flex;gap:6px;overflow-x:auto;padding:0 2px 10px;scrollbar-width:thin;
+    scroll-snap-type:x mandatory}
+  .days::-webkit-scrollbar{height:4px}
+  .days::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+  .daycol{flex:0 0 92px;min-height:128px;background:var(--card);border:1px solid var(--bd);border-radius:16px;
+    padding:8px 7px;display:flex;flex-direction:column;scroll-snap-align:start;transition:opacity .25s,border-color .25s}
+  .daycol.past{opacity:.4}
+  .daycol.today{border-color:var(--blue);background:linear-gradient(170deg,rgba(74,158,255,.15),var(--card) 75%)}
+  .daycol.hotday{border-color:rgba(248,113,113,.5);background:linear-gradient(170deg,rgba(248,113,113,.12),var(--card) 75%)}
+  .dhead{font-size:10px;color:var(--mut);font-weight:700;margin-bottom:5px;white-space:nowrap}
+  .dhead b{color:var(--tx);display:inline-block;font-size:13px;font-weight:800;margin-left:3px}
+  .todaytag{font-size:9px;color:var(--blue);font-weight:750;margin-left:2px}
+  .tg-list{flex:1;min-height:0}
+  .tg{display:block;font-size:9.5px;padding:4px 6px;border-radius:6px;margin-bottom:4px;line-height:1.35;font-weight:500;overflow:hidden}
+  .tg .cat{display:block;font-size:8.5px;margin-top:2px;opacity:.9}
+  .c-base{background:rgba(52,211,153,.15);color:var(--green)}
+  .c-ar{background:rgba(74,158,255,.16);color:var(--blue)}
+  .c-ks{background:rgba(251,146,60,.16);color:var(--orange)}
+  .c-fit{background:rgba(52,211,153,.16);color:var(--green)}
+  .c-st{background:rgba(167,139,250,.16);color:var(--purple)}
+  .c-rv{background:rgba(251,191,36,.16);color:var(--yellow)}
+  .c-my{background:rgba(125,136,153,.18);color:var(--mut)}
+  .c-hot{background:rgba(248,113,113,.16);color:var(--red)}
+  .dn{font-size:9.5px;color:var(--mut2);font-weight:700;text-align:center;padding-top:6px;margin-top:auto;border-top:1px dashed var(--bd)}
+  .daycol.today .dn{color:var(--green);border-top-color:rgba(52,211,153,.25)}
+  .tjsum{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer}
+  .tjnum{font-size:26px;font-weight:800;color:var(--green);letter-spacing:-1px;line-height:1.05}
+  .tjnum span{font-size:13px;color:var(--mut);font-weight:700}
+  .tjpct{font-size:11px;font-weight:700;color:var(--blue)}
+  .tjhint{font-size:8.5px;color:var(--mut2);margin-top:4px}
+
+  /* 情境提示：按当前时段给出该做什么（应用精力曲线） */
+  .ctxhint{background:linear-gradient(100deg,rgba(167,139,250,.13),rgba(74,158,255,.05));
+    border:1px solid rgba(167,139,250,.26);border-radius:12px;padding:10px 13px;
+    font-size:12.5px;color:var(--tx);margin-bottom:10px;line-height:1.55}
+  .ctxhint b{color:var(--purple);font-weight:750}
+  .ctxhint .cx{color:var(--mut);font-size:11.5px;display:block;margin-top:2px}
+  /* 今日打卡区：全宽大卡片，手指好点 */
+  .task{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;background:var(--card);
+    border:1px solid var(--bd);border-radius:14px;margin-bottom:8px;cursor:pointer;
+    transition:opacity .2s,border-color .2s,background .2s,transform .12s}
+  .task:active{transform:scale(.985)}
+  .task.done{opacity:.42;background:rgba(20,26,35,.5)}
+  .task.done .tt{text-decoration:line-through;text-decoration-color:var(--mut2)}
+  .task.anchor{background:linear-gradient(100deg,rgba(52,211,153,.08),var(--card) 55%);
+    border-color:rgba(52,211,153,.22)}
+  .cb{width:23px;height:23px;border:2px solid var(--gray);border-radius:7px;flex-shrink:0;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:transparent;
+    transition:background .2s,border-color .2s,transform .22s cubic-bezier(.34,1.4,.64,1)}
+  .task.done .cb{background:var(--green);border-color:var(--green);color:#052e1c;transform:scale(1.08)}
+  .tt{flex:1;font-size:14.5px;line-height:1.5;font-weight:500}
+  .cat{font-size:10px;padding:2px 8px;border-radius:6px;margin-left:8px;font-weight:700;
+    letter-spacing:.3px;vertical-align:1.5px;white-space:nowrap}
+  .del{color:var(--mut2);font-size:18px;padding:0 4px;line-height:1}
+  /* 周网格内若出现任务则保持紧凑 */
+  .daycol .task{padding:6px;gap:6px;border-radius:6px;margin-bottom:4px;background:var(--card2);border-color:transparent}
+  .daycol .task .cb{width:15px;height:15px;border-width:1.5px;border-radius:4px;font-size:9px}
+  .daycol .task .tt{font-size:9.5px;line-height:1.35}
+
+  .add{display:flex;gap:8px;margin-top:10px}
+  .add input{flex:1;min-width:0;background:var(--card);border:1px solid var(--bd);border-radius:13px;
+    padding:12px 14px;color:var(--tx);font-size:13.5px;min-height:46px;font-family:inherit;transition:border-color .2s}
+  .add input:focus{outline:none;border-color:var(--blue)}
+  .add input::placeholder{color:var(--mut2)}
+  .add button{min-height:46px;padding:0 18px;background:var(--card);border:1px solid var(--bd);
+    border-radius:13px;color:var(--green);font-size:13.5px;font-weight:700;cursor:pointer}
+
+  .morebar{display:flex;gap:8px;margin-top:4px}
+  .morebtn{flex:1;min-height:46px;background:var(--card);border:1px solid var(--bd);border-radius:13px;
+    color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;transition:background .2s}
+  .morebtn:active{transform:scale(.99);background:var(--card2)}
+
+  /* 折叠 */
+  /* ===== 月历（折叠区内）===== */
+  .cal{background:var(--card2);border-radius:13px;padding:12px}
+  .chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .chead b{font-size:13.5px;font-weight:700}
+  .nav{display:flex;gap:6px}
+  .nav button{min-width:34px;height:34px;padding:0 8px;background:var(--card);border:1px solid var(--bd);
+    border-radius:9px;color:var(--tx);font-size:14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center}
+  .nav button:active{transform:scale(.93)}
+  .cgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+  .wd{text-align:center;font-size:10.5px;color:var(--mut2);padding-bottom:6px;font-weight:700}
+  .cell{min-height:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border-radius:9px;font-size:12.5px;position:relative;cursor:pointer;
+    border:1px solid transparent;overflow:hidden}
+  .cell.out{opacity:.18}
+  .cell.has{font-weight:750}
+  .cell .cnt{position:absolute;top:1px;right:3px;font-size:9px;font-weight:800;color:var(--blue);line-height:1}
+  .cell.hot{background:rgba(248,113,113,.14)}
+  .cell.hot .cnt{color:var(--red)}
+  .cell.today{border-color:var(--blue);background:rgba(74,158,255,.14)}
+  .mline{margin-top:11px;padding-top:10px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--mut)}
+  .mline b{color:var(--tx);display:block;margin-bottom:5px;font-size:12px}
+  .mline div{padding:2px 0}
+  /* 空状态 / 倒计时行 */
+  .empty{background:var(--card);border:1px dashed var(--bd);border-radius:14px;padding:16px;
+    text-align:center;font-size:12.5px;color:var(--mut2)}
+  .cds{display:flex;gap:14px;font-size:12px;color:var(--mut);flex-wrap:wrap}
+  .cds b{font-weight:700}
+
+  details{background:var(--card);border:1px solid var(--bd);border-radius:15px;margin-bottom:9px;overflow:hidden}
+  summary{padding:14px 16px;font-size:13.5px;font-weight:650;cursor:pointer;list-style:none;
+    display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"▾";color:var(--mut2);transition:.25s;font-size:13px}
+  details[open] summary::after{transform:rotate(180deg)}
+  .dbody{padding:0 16px 15px}
+  .stage{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px}
+  .stage:last-child{border-bottom:none}
+  .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+  .stage .sd{font-size:11px;color:var(--mut);margin-left:auto}
+  .tl{position:relative;padding-left:22px}
+  .tl::before{content:"";position:absolute;left:5px;top:8px;bottom:8px;width:2px;background:var(--bd)}
+  .node{position:relative;padding:9px 0}
+  .node::before{content:"";position:absolute;left:-21px;top:15px;width:11px;height:11px;border-radius:50%;
+    background:var(--card);border:2.5px solid var(--blue)}
+  .node.hot::before{border-color:var(--red);box-shadow:0 0 0 4px rgba(248,113,113,.16)}
+  .node.warn::before{border-color:var(--orange)}
+  .node.done::before{border-color:var(--green)}
+  .ndate{font-size:11px;color:var(--mut);font-weight:700}
+  .ntitle{font-size:13px;font-weight:650}
+  .ndesc{font-size:11.5px;color:var(--mut)}
+  .tpl{background:var(--card2);border:1px solid var(--bd);border-radius:11px;padding:12px 14px;
+    font-size:12.5px;font-family:ui-monospace,Menlo,monospace;color:var(--green);word-break:break-all}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .btn{min-height:46px;border:1px solid var(--bd);background:var(--card2);color:var(--tx);border-radius:12px;
+    font-size:12.5px;font-weight:650;cursor:pointer}
+  .btn:active{transform:scale(.98)}
+  .btn.ok{border-color:rgba(52,211,153,.45);color:var(--green)}
+  .rule{background:var(--card2);border:1px solid var(--bd);border-radius:11px;padding:11px 13px;margin-bottom:7px}
+  .rule .rt{font-size:12.5px;font-weight:650;margin-bottom:2px}
+  .rule .rd{font-size:11.5px;color:var(--mut)}
+  .rule.light{border-left:3px solid var(--orange)}
+  .rule.heavy{border-left:3px solid var(--red)}
+  .rule.week{border-left:3px solid var(--green)}
+  .note{font-size:11.5px;color:var(--mut);line-height:1.75;margin-top:10px}
+  footer{margin-top:28px;padding-top:14px;border-top:1px solid var(--bd);font-size:10.5px;
+    color:var(--mut2);text-align:center;line-height:1.8}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);
+    background:linear-gradient(135deg,var(--green),#22C55E);color:#052e1c;padding:11px 22px;
+    border-radius:22px;font-size:13px;font-weight:750;opacity:0;transition:.3s cubic-bezier(.34,1.3,.64,1);
+    pointer-events:none;z-index:99;white-space:nowrap;box-shadow:0 6px 22px rgba(52,211,153,.32)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ===== Tab ===== */
+  .tabs{display:flex;gap:5px;background:var(--card);border:1px solid var(--bd);
+    border-radius:13px;padding:4px;margin-bottom:16px}
+  .tab{flex:1;min-height:40px;border:none;background:transparent;color:var(--mut);
+    font-size:13.5px;font-weight:700;border-radius:10px;cursor:pointer;transition:.2s;font-family:inherit}
+  .tab.active{background:linear-gradient(135deg,var(--blue),#3B82F6);color:#04121f}
+  /* ===== 下一场卡片 ===== */
+  .nextcard{border-radius:18px;padding:15px 16px;margin-bottom:12px;border:1px solid}
+  .nextcard.ferrari{background:linear-gradient(155deg,rgba(248,113,113,.16),transparent 72%);
+    border-color:rgba(248,113,113,.35)}
+  .nextcard.we{background:linear-gradient(155deg,rgba(167,139,250,.16),transparent 72%);
+    border-color:rgba(167,139,250,.35)}
+  .nc-lab{font-size:10.5px;color:var(--mut);font-weight:700;letter-spacing:1px}
+  .nc-main{font-size:20px;font-weight:780;letter-spacing:-.4px;margin:3px 0 4px}
+  .nc-sub{font-size:12px;color:var(--mut)}
+  .nc-cd{font-size:12.5px;margin-top:9px;color:var(--tx)}
+  .nc-cd b{font-size:19px;font-weight:800;color:var(--blue)}
+  .ferrari-tag{background:rgba(248,113,113,.2);color:var(--red);padding:2px 8px;
+    border-radius:6px;font-size:10px;font-weight:750}
+  /* ===== F1 场次明细 ===== */
+  .nc-note{font-size:11px;color:var(--tx);background:rgba(248,113,113,.1);
+    border-left:2px solid var(--red);padding:7px 9px;border-radius:0 7px 7px 0;
+    margin-top:11px;line-height:1.55}
+  .nc-note b{color:var(--red);font-weight:800}
+  .sess{margin-top:11px;border-top:1px solid var(--bd);padding-top:9px}
+  .ss{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12px}
+  .ss-d{color:var(--mut);font-size:11px;min-width:60px;flex-shrink:0}
+  .ss-n{flex:1;color:var(--tx)}
+  .ss-t{font-weight:750;font-variant-numeric:tabular-nums;color:var(--tx);
+    min-width:42px;text-align:right}
+  .ss.qual .ss-n,.ss.qual .ss-t{color:var(--yellow)}
+  .ss.sprint .ss-n,.ss.sprint .ss-t{color:var(--purple)}
+  .ss.race .ss-n{font-weight:800}
+  .ss.race .ss-t{color:var(--red);font-size:13px}
+  .f1list{margin-bottom:10px}
+  .race{background:var(--card);border:1px solid var(--bd);border-radius:12px;
+    margin-bottom:7px;overflow:hidden}
+  .race.fer{border-color:rgba(248,113,113,.45);
+    background:linear-gradient(155deg,rgba(248,113,113,.09),transparent 70%)}
+  .race summary{display:flex;gap:9px;align-items:center;padding:11px 13px;
+    cursor:pointer;font-size:12.5px;list-style:none}
+  .race summary::-webkit-details-marker{display:none}
+  .rd{color:var(--mut);font-size:11px;min-width:76px;flex-shrink:0;
+    font-variant-numeric:tabular-nums}
+  .rname{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .fmt{background:var(--card2);color:var(--mut);padding:1px 6px;border-radius:5px;
+    font-size:10px;font-weight:700}
+  .fmt.sprint{background:rgba(167,139,250,.18);color:var(--purple)}
+  .rn{font-size:10px;color:var(--mut)}
+  .race .sess{margin:0;padding:2px 13px 11px;border-top:1px solid var(--bd)}
+  /* ===== 赛程表 ===== */
+  .tbl{background:var(--card);border:1px solid var(--bd);border-radius:13px;overflow:hidden;margin-bottom:10px}
+  .tr{display:flex;gap:10px;padding:9px 13px;font-size:12.5px;
+    border-bottom:1px solid var(--bd);align-items:baseline}
+  .tr:last-child{border-bottom:none}
+  .tr span:first-child{flex:0 0 96px;color:var(--mut);font-weight:650}
+  .tr span:last-child{flex:1}
+  .tr.th{background:var(--card2);font-size:10.5px;color:var(--mut2);font-weight:700;letter-spacing:.5px}
+  .tr.ferrari-row{background:rgba(248,113,113,.07)}
+  .tr.ferrari-row b{color:var(--red)}
+  .tr.we-row{background:rgba(167,139,250,.07)}
+  .tr.we-row b{color:var(--purple)}
+  .tr.done{opacity:.6;background:rgba(52,211,153,.06)}
+  .tr.done b{color:var(--green)}
+  .wewin{color:var(--green);font-weight:750}
+  .wtbd{color:var(--orange);font-size:11px}
+  .srcnote{font-size:11px;color:var(--mut);line-height:1.7;background:var(--card);
+    border:1px solid var(--bd);border-radius:11px;padding:11px 13px;margin-bottom:14px}
+  .srcnote b{color:var(--tx)}
+  /* ===== 资讯 ===== */
+  .news{background:var(--card);border:1px solid var(--bd);border-radius:13px;padding:12px 14px;margin-bottom:9px}
+  .ns-tag{display:inline-block;font-size:9.5px;font-weight:750;padding:2px 8px;
+    border-radius:6px;margin-bottom:6px;letter-spacing:.3px}
+  .t-macro{background:rgba(251,191,36,.18);color:var(--yellow)}
+  .t-us{background:rgba(74,158,255,.18);color:var(--blue)}
+  .t-gold{background:rgba(251,146,60,.18);color:var(--orange)}
+  .t-cn{background:rgba(248,113,113,.18);color:var(--red)}
+  .t-world{background:rgba(167,139,250,.18);color:var(--purple)}
+  .t-oil{background:rgba(125,136,153,.2);color:var(--mut)}
+  .ns-t{font-size:13.5px;font-weight:700;line-height:1.45;margin-bottom:5px}
+  .ns-d{font-size:12px;color:var(--mut);line-height:1.65}
+  .ns-d b{color:var(--tx);font-weight:700}
+  .g{color:var(--green)}.r{color:var(--red)}
+  .srclist{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+  .srclist a{background:var(--card);border:1px solid var(--bd);border-radius:9px;
+    padding:8px 13px;font-size:12px;color:var(--blue);text-decoration:none;font-weight:650}
+  .srclist a:active{background:var(--card2)}
+  /* 热搜列表 */
+  .srctabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:9px;margin-bottom:9px;
+    scrollbar-width:none}
+  .srctabs::-webkit-scrollbar{display:none}
+  .stab{flex:0 0 auto;min-height:34px;padding:0 13px;background:var(--card);
+    border:1px solid var(--bd);border-radius:10px;color:var(--mut);font-size:12px;
+    font-weight:650;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .stab.on{background:var(--blue);border-color:var(--blue);color:#04121f}
+  .stab.dis{opacity:.42}
+  .hotitem{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;
+    background:var(--card);border:1px solid var(--bd);border-radius:11px;
+    margin-bottom:6px;text-decoration:none;color:var(--tx);transition:background .15s}
+  .hotitem:active{background:var(--card2)}
+  .hi-n{flex:0 0 22px;font-size:12px;font-weight:800;color:var(--mut2);
+    font-variant-numeric:tabular-nums;text-align:center;line-height:1.5}
+  .hotitem:nth-child(1) .hi-n{color:var(--red)}
+  .hotitem:nth-child(2) .hi-n{color:var(--orange)}
+  .hotitem:nth-child(3) .hi-n{color:var(--yellow)}
+  .hi-t{flex:1;font-size:13.5px;line-height:1.55}
+  .hi-m{flex:0 0 auto;font-size:10.5px;color:var(--mut2);line-height:1.7}
+  .hi-go{flex:0 0 auto;color:var(--mut2);font-size:17px;line-height:1.3}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div><div class="htitle">今天干什么</div><div class="sub">Gary · 周网格日程</div></div>
+  <button id="install">装到桌面</button>
+</header>
+
+<div class="tabs">
+  <button class="tab active" id="tabBtnPlan" onclick="switchTab('plan')">日程</button>
+  <button class="tab" id="tabBtnWatch" onclick="switchTab('watch')">关注</button>
+</div>
+
+<div id="tabPlan">
+
+<div class="today" id="todayBox">
+  <div class="trow">
+    <div style="flex:1;min-width:0">
+      <div class="tdate" id="tDate">—</div>
+      <div class="tdd" id="tMain">—</div>
+      <div class="pbar"><div class="pfill" id="pFill"></div></div>
+      <div class="ptext">
+        <span id="pText">—</span>
+        <span class="cds"><span>口译 <b class="c-red" id="d1">—</b>天</span><span>科三 <b class="c-orange" id="d2">—</b>天</span></span>
+      </div>
+    </div>
+    <svg class="ring" viewBox="0 0 58 58">
+      <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#34D399"/><stop offset="100%" stop-color="#4A9EFF"/>
+      </linearGradient></defs>
+      <circle class="ring-bg" cx="29" cy="29" r="24" fill="none" stroke-width="5"/>
+      <circle class="ring-fg" id="ringFg" cx="29" cy="29" r="24" fill="none" stroke-width="5"
+              stroke-dasharray="150.8" stroke-dashoffset="150.8"/>
+    </svg>
+    <div class="ringtx" id="ringTx">0%</div>
+  </div>
+  <div class="anchorline" id="anchorLine">—</div>
+</div>
+
+<h2>今日打卡 <em id="tCount"></em></h2>
+<div class="ctxhint" id="ctxHint">—</div>
+<div id="todayTasks"></div>
+<div class="add">
+  <input id="newTask" placeholder="给今天加件事…" maxlength="60">
+  <button onclick="addTask()">加</button>
+</div>
+
+<h2>本周 <em id="w1Range">—</em></h2>
+<div class="week" id="week0"></div>
+
+<h2>下周 <em id="w2Range">—</em></h2>
+<div class="week" id="week1"></div>
+
+<div id="extraWeeks"></div>
+
+<div class="morebar">
+  <button class="morebtn" id="moreBtn" onclick="moreWeeks()">展开更多周</button>
+</div>
+
+<h2>查资料</h2>
+<details>
+  <summary>核心模式（你自己总结的）</summary>
+  <div class="dbody">
+    <div class="note" style="margin-top:0">
+      <b style="color:var(--red)">「好牌打烂 → 退而求其次 → 降低标准自我宽慰 → 心里知道」</b><br>
+      循环：起点好 → 执行崩 → 目标调低「也行吧」 → 归因环境 → 内心不甘 → 焦虑。
+    </div>
+    <div style="height:8px"></div>
+    <div class="rule light"><div class="rt">① 打卡 = 累积反证</div><div class="rd">不是监督。下次想自我怀疑时，有数据可对质。</div></div>
+    <div class="rule week"><div class="rt">② 周复盘做数据对质</div><div class="rd">区分「真达标」和「又降标准」，我直说不绕。</div></div>
+    <div class="rule heavy"><div class="rt">③ 保底线由我客观定义，不接受你自己下调</div><div class="rd">突发事件除外（属合理顺延，不算失败）。</div></div>
+  </div>
+</details>
+<details>
+  <summary>月历</summary>
+  <div class="dbody" id="miniCal">
+    <div style="background:var(--card2);border-radius:13px;padding:12px">
+      <div class="chead">
+        <b id="calTitle">—</b>
+        <div class="nav">
+          <button onclick="mv(-1)">‹</button>
+          <button onclick="mv(1)">›</button>
+          <button onclick="goToday()">今</button>
+        </div>
+      </div>
+      <div class="cgrid" id="wdRow"></div>
+      <div class="cgrid" id="calGrid"></div>
+      <div class="mline" id="mline"></div>
+    </div>
+  </div>
+</details>
+<details>
+  <summary>每日锚点（保底 / 理想）</summary>
+  <div class="dbody">
+    <div class="stage"><span class="dot" style="background:var(--blue)"></span>起床<span class="sd">底线 ≤10:00 · 理想 ≤9:00</span></div>
+    <div class="stage"><span class="dot" style="background:var(--green)"></span>三餐<span class="sd">固定三餐 · 理想蛋白 142g</span></div>
+    <div class="stage"><span class="dot" style="background:var(--purple)"></span>口译冲刺<span class="sd">保底 3h · 理想 3.5h</span></div>
+    <div class="stage"><span class="dot" style="background:var(--yellow)"></span>运动<span class="sd">保底 40min · 理想 60min</span></div>
+    <div class="note"><b style="color:var(--green)">保底版做到即达标</b>，理想版超额不考核 — 防「做不到理想就干脆不做」。</div>
+  </div>
+</details>
+<details>
+  <summary>六阶段</summary>
+  <div class="dbody">
+    <div class="stage"><span class="dot" style="background:#6B7688"></span>阶段0 休息<span class="sd">8/28–8/30</span></div>
+    <div class="stage"><span class="dot" style="background:#4A9EFF"></span>阶段1 轻启动（上海）<span class="sd">8/31–9/8</span></div>
+    <div class="stage"><span class="dot" style="background:#FB923C"></span>阶段2 赴杭 + 口译<span class="sd">9/9–9/14</span></div>
+    <div class="stage"><span class="dot" style="background:#34D399"></span>阶段3 杭州沉淀 + 秋招<span class="sd">9/15–12/31 · 主战场</span></div>
+    <div class="stage"><span class="dot" style="background:#A78BFA"></span>阶段4 春招备战 回沪<span class="sd">2027/1–2 · 补战场</span></div>
+    <div class="stage"><span class="dot" style="background:#F87171"></span>阶段5 冲刺（春招 + 毕业）<span class="sd">2027/3–6</span></div>
+  </div>
+</details>
+<details>
+  <summary>关键节点</summary>
+  <div class="dbody">
+    <div class="tl">
+      <div class="node done"><div class="ndate">8/28</div><div class="ntitle">离职（实习结束）</div></div>
+      <div class="node hot"><div class="ndate">9/9 前</div><div class="ntitle">科三考试</div><div class="ndesc">赴杭前最后窗口 · 已挂一次</div></div>
+      <div class="node"><div class="ndate">9/9 午后</div><div class="ntitle">赴杭</div><div class="ndesc">周中走，人少不赶</div></div>
+      <div class="node hot"><div class="ndate">9/14 14:00</div><div class="ntitle">阿语口译考试 + 开学</div><div class="ndesc">早上有课（杭州线下）</div></div>
+      <div class="node warn"><div class="ndate">9/15–26</div><div class="ntitle">六级报名窗口</div><div class="ndesc">先确认刷分政策</div></div>
+      <div class="node hot"><div class="ndate">10/25</div><div class="ntitle">托业考试（冲 800）</div><div class="ndesc">秋招入场券 · 报名截止 9/28</div></div>
+      <div class="node"><div class="ndate">2026/12</div><div class="ntitle">六级笔试（冲500）</div><div class="ndesc">12/12 · 出分2月底</div></div>
+      <div class="node"><div class="ndate">2027/2</div><div class="ntitle">春招启动 + 切回上海</div><div class="ndesc">分层投递：冲刺 / 主攻 / 保底（成长优先，你有野心）</div></div>
+      <div class="node"><div class="ndate">2027/3</div><div class="ntitle">春招高峰（3–4月）</div><div class="ndesc">全力面试 · 专八已删除，不再双线</div></div>
+      <div class="node"><div class="ndate">2027/6</div><div class="ntitle">毕业</div></div>
+    </div>
+  </div>
+</details>
+<details>
+  <summary>每晚打卡 + 我怎么提醒你</summary>
+  <div class="dbody">
+    <div class="tpl">8/29 · 睡2:20起10:40 · 餐2宵无 · 欠 计划冲突 · 科三✓</div>
+    <div class="note" style="margin:0 0 8px">当前：休息期（8/28–8/30）用这行</div>
+    <div class="btns">
+      <button class="btn ok" onclick="cp('8/29 · 睡__起__ · 餐2宵无 · 达标 · ')">复制 休息期</button>
+      <button class="btn ok" onclick="cp('9/1 · 睡__起__ · 餐3宵无 · 口译180动45 · 达标')">复制 9/1 起</button>
+    </div>
+    <div style="height:10px"></div>
+    <div class="note">懒人版：只发 <b style="color:var(--tx)">8/29 欠 计划冲突</b> 也够用。<br>原因标签 <b style="color:var(--tx)">高估 / 启动 / 突发 / 漂移</b>，都不贴切就写真因。<br><b style="color:var(--tx)">菜名不用列</b>——4 人合餐算不出份量，只记餐数与宵夜。</div>
+    <div style="height:11px"></div>
+    <div class="rule light"><div class="rt">当日「欠」→ 当天就提示（轻）</div><div class="rd">≤2 句 · 只讲明天怎么补 · 不问罪</div></div>
+    <div class="rule heavy"><div class="rt">连续 2 天「欠」→ 重提示</div><div class="rd">降级「仅保锚点」+ 给 Plan B/C</div></div>
+    <div class="rule week"><div class="rt">每周日 → 复盘</div><div class="rd">计划 vs 实际对比表</div></div>
+  </div>
+</details>
+
+</div><!-- /tabPlan -->
+
+<div id="tabWatch" style="display:none">
+
+<h2>F1 2026 <span class="hint">含各场次 · 北京时间</span></h2>
+<div class="nextcard ferrari">
+  <div class="nc-lab">下一站 · 标准周末（无冲刺赛）</div>
+  <div class="nc-main">意大利大奖赛 · 蒙扎</div>
+  <div class="nc-sub">9/4 – 9/6　正赛 周日 21:00</div>
+  <div class="nc-cd"><b id="f1Cd">—</b> 天后开赛 · <span class="ferrari-tag">法拉利主场</span></div>
+  <div class="sess" id="f1NextSess"></div>
+  <div class="nc-note">安东内利（积分领跑）更换动力单元，<b>正赛末位发车</b>——法拉利主场机会</div>
+</div>
+<div id="f1List" class="f1list"></div>
+<div class="srcnote">剩 11 站 · <b>仅新加坡 10/9–11 为冲刺周末</b>（含冲刺排位赛 + 冲刺赛），其余均为标准周末 · 车队榜：梅奔 379 → <b class="ferrari-tag">法拉利 307</b> → 迈凯伦 220 · 北京时间，以官方最终确认为准。</div>
+
+<h2>LPL 2026 · WE <span class="hint">第三赛段季后赛</span></h2>
+<div class="nextcard we">
+  <div class="nc-lab">下一场 · 胜者组 M4</div>
+  <div class="nc-main">BLG vs WE（BO5）</div>
+  <div class="nc-sub">9/3 周四　上海 iG 主场 · 虎牙上海竞演中心<br><span class="wtbd">开赛时间待官方公布</span></div>
+  <div class="nc-cd"><b id="lplCd">—</b> 天后开打 · <span class="wewin">首轮 3–1 淘汰 JDG</span></div>
+</div>
+<div class="tbl">
+  <div class="tr th"><span>日期</span><span>对阵 / 阶段</span></div>
+  <div class="tr done"><span>8/30</span><span><b>WE 3–1 JDG</b> · M2 ✔ 晋级</span></div>
+  <div class="tr we-row"><span>9/3</span><span><b>BLG vs WE</b> · M4 胜者组</span></div>
+  <div class="tr"><span>9/4</span><span>AL vs TES/LGD · M3</span></div>
+  <div class="tr"><span>9/5</span><span>败者组 M5 / M6（iG、NIP 无复活甲）</span></div>
+  <div class="tr"><span>9/6</span><span>败者组 M7 / M8</span></div>
+  <div class="tr"><span>9/7–8</span><span>胜者组决赛 M9 / M10</span></div>
+  <div class="tr"><span>9/12</span><span>败者组决赛 M11</span></div>
+  <div class="tr"><span>9/13</span><span><b>总决赛 M12</b> · 东方体育中心</span></div>
+  <div class="tr"><span>9/17–19</span><span>全球总决赛 LPL 资格赛（S 赛 10/15 开赛）</span></div>
+</div>
+<div class="srcnote">WE 首轮 3–1 拿下 JDG，进胜者组对 <b>BLG</b>（登峰组第一 12–2，<b>已锁定 S 赛资格</b>，硬仗）。但 <b>WE 此前赢过 BLG</b>——赛后 About：「上次赢了一次，这次我觉得还能赢一次」。<b>双败制：9/3 输了不是淘汰</b>，掉败者组 9/6 还有机会。</div>
+
+<div class="srclist">
+  <a href="https://www.ferrari.com/en-EN/formula1" target="_blank" rel="noopener">法拉利 F1</a>
+  <a href="https://lpl.qq.com/" target="_blank" rel="noopener">LPL 官网</a>
+</div>
+
+</div><!-- /tabWatch -->
+
+<footer>
+  GPT 私人助理 · 直接挑刺 + Plan B/C<br>
+  脱敏版（不含财务数据）· 勾选存本机 · 更新自动生效
+</footer>
+</div>
+
+<div id="toast"></div>
+<script>
+const S={
+'2026-08-29':[{t:'KTV 聚会 · 已完成',c:'rv'}],
+'2026-08-30':[{t:'科目三 · 驾校练车（两遍 · 二遍达标）',c:'ks'},{t:'LPL：WE 3–1 JDG 晋级',c:'rv'}],
+'2026-08-31':[{t:'口译冲刺 3h',c:'ar'},{t:'感冒休养 · 暂停训练',c:'fit'}],
+'2026-09-01':[{t:'口译冲刺 3h',c:'ar'},{t:'两场亲戚饭局 · 控主食忌宵夜',c:'rv'}],
+'2026-09-02':[{t:'★ 科目三 · 练车 8:00',c:'ks'},{t:'口译冲刺 3h（下午–晚上）',c:'ar'},{t:'秋招网申 2h（投完即止）',c:'st'}],
+'2026-09-03':[{t:'口译冲刺 3h',c:'ar'},{t:'简历按 JD 改 + 诚信三雷核查',c:'st'}],
+'2026-09-04':[{t:'口译冲刺 3h',c:'ar'}],
+'2026-09-05':[{t:'口译冲刺 3h',c:'ar'},{t:'周复盘',c:'rv'}],
+'2026-09-06':[{t:'口译冲刺 3h',c:'ar'}],
+'2026-09-07':[{t:'口译冲刺 3h',c:'ar'},{t:'科三 · 跑真实考试路线',c:'ks'}],
+'2026-09-08':[{t:'★ 科三 考试 上午（沪最后窗口·无缓冲）',c:'hot'},{t:'口译冲刺 2h',c:'ar'}],
+'2026-09-09':[{t:'口译冲刺 3h',c:'ar'},{t:'午后赴杭',c:'rv'}],
+'2026-09-10':[{t:'口译冲刺 3h',c:'ar'},{t:'杭州安顿 + 水课预备',c:'rv'}],
+'2026-09-11':[{t:'口译冲刺 3h',c:'ar'}],
+'2026-09-12':[{t:'口译全真模拟',c:'ar'}],
+'2026-09-13':[{t:'口译冲刺 3h（最后一天）',c:'ar'}],
+'2026-09-14':[{t:'阿拉伯法律水课（早上·杭州线下）',c:'st'},{t:'★ 阿语口译考试 14:00',c:'hot'},{t:'问教务处：大四上5门/大四下2门清单 → 倒排重修启动',c:'rv'}]
+};
+const M={
+'2026-8':['阶段0 · 休息（8/28–8/30）','8/31 起阶段1：**9/14 口译冲刺 3–3.5h/天** + 9/8 科三 + 2h 投完秋招网申'],
+'2026-9':['★ 秋招主战场 **12h/周**（与 1 月初联考错峰，不必再压缩）','**9/14 阿语口译考试**（7 门之外的单独科目）','**9/14 问教务处：大四上5门/大四下2门清单 → 倒排重修启动**','方向：高增长产业出海商务（原金融线降级）','绕开机筛：冷投递 0.1–2% vs 内推 28.5% → 重心转弱关系 + 信息面试','六级报名 9/15–26（刷分不受限；450 已过 425 线）','托业仅作「钥匙」，不走国企可不报'],
+'2026-10':['★ 秋招网申 + 笔试面试','重修启动（按 9/14 清单倒排）','健身稳态'],
+'2026-11':['★ 秋招收尾 / 补录','重修推进（与秋招错峰）','简历打磨'],
+'2026-12':['12/12 六级','**12 月中起重修须排在六级前**（联考仅隔 3 周）','里程碑 160 斤'],
+'2027-1':['★ **大四上 5 门联考**（P0 红线，一轮过掉）','春招启动（补战场）','回沪 base'],
+'2027-2':['春招启动（秋招未果时的补战场）','回沪 base','2 月底出六级分'],
+'2027-3':['春招高峰（3–4月）','减脂里程碑 145 斤'],
+'2027-4':['春招面试全力','可随时赴沪面试'],
+'2027-5':['达成 135 斤','春招收尾 / 拿 offer'],
+'2027-6':['毕业']
+};
+const CAT={base:'保底',ar:'阿语',ks:'科三',fit:'健身',st:'学习',rv:'复盘',my:'自建',hot:'DDL'};
+const HOT={'2026-09-08':1,'2026-09-14':1,'2026-09-28':1,'2026-10-25':1};
+
+function anchorsFor(k){
+  /* 8/29 一次性例外：求职报告收尾，入睡放宽到 2:30；其余日期维持渐进目标 */
+  const sleep=(k==='2026-08-29')?'入睡 ≤2:30（今日例外）':'入睡 ≤2:00（底线，源头）';
+  /* 有外部约定的日子，起床锚点前移——靠约定而不是靠意志力 */
+  const wake=(k==='2026-09-02')?'起床 ≤7:00（8:00 练车）'
+            :(k==='2026-08-30')?'起床 ≤9:15（10:00 驾校）'
+            :'起床 ≤10:00（底线）';
+  const a=[{t:sleep,c:'base'},
+           {t:wake,c:'base'},
+           {t:'三餐固定 · 控碳水戒宵夜',c:'base'}];
+  if(k>='2026-08-31') a.push({t:'运动 40min（保底）',c:'fit'});
+  /* 9/14 阿语口译考试＝7 门重修之外的单独科目，冲刺期保底 3h/天（非 60min） */
+  if(k>='2026-08-31'&&k<='2026-09-13') a.push({t:'口译冲刺 3h（保底）',c:'ar'});
+  return a.map(x=>({...x,anchor:1}));
+}
+
+const K_DONE='gk_done_v1', K_MY='gk_my_v1';
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let done=load(K_DONE,{}), mine=load(K_MY,{});
+const pad=n=>String(n).padStart(2,'0');
+const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const WD=['一','二','三','四','五','六','日'];
+const CN=['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+const q=s=>JSON.stringify(s).replace(/"/g,'&quot;');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+let today=new Date(); today.setHours(0,0,0,0);
+let view=new Date(today.getFullYear(),today.getMonth(),1);
+let extraWeeks=0;
+const MAXWEEKS=8;
+const RING=2*Math.PI*24;
+
+function tasksOf(k){
+  const s=(S[k]||[]).map(x=>({...x,fixed:1}));
+  const m=(mine[k]||[]).map(x=>({...x,my:1}));
+  /* 锚点是「保底线」：当天已排了同类别的具体任务（如 S 里已有口译 3h、
+     或已排「感冒休养·暂停训练」），就不再重复显示锚点那条，避免同一件事出现两条。
+     没排到的类别（如某天没排健身）锚点照常显示，保底不丢。 */
+  const covered=new Set(s.concat(m).map(x=>x.c));
+  const anchors=anchorsFor(k).filter(a=>!covered.has(a.c));
+  return anchors.concat(s).concat(m);
+}
+function schedOnly(k){
+  return (S[k]||[]).map(x=>({...x,fixed:1})).concat((mine[k]||[]).map(x=>({...x,my:1})));
+}
+function isDone(k,t){return (done[k]||[]).indexOf(t)>-1}
+function doneCount(k){return tasksOf(k).filter(x=>isDone(k,x.t)).length}
+function toggle(k,t){
+  if(k!==key(today)){toast('只能勾今天的');return}
+  const arr=done[k]||[], i=arr.indexOf(t);
+  if(i>-1)arr.splice(i,1); else arr.push(t);
+  done[k]=arr; save(K_DONE,done);
+  patchUI(t);   /* 只局部更新 DOM，不整体 render → 页面不会跳动 */
+}
+/* 局部刷新：只改被点的那一项 + 所有进度数字，不重建任何容器 */
+function patchUI(t){
+  const k=key(today), dd=isDone(k,t);
+  document.querySelectorAll('#todayTasks .task').forEach(el=>{
+    if(el.getAttribute('data-t')===t) el.classList.toggle('done',dd);
+  });
+  updateProgress();
+  const n=doneCount(k), tot=tasksOf(k).length;
+  if(tot) toast(n>=tot?'今天全部搞定':`已完成 ${n}/${tot}`);
+}
+function updateProgress(){
+  const k=key(today), list=tasksOf(k);
+  const dn=list.filter(x=>isDone(k,x.t)).length;
+  const pct=list.length?Math.round(dn/list.length*100):0;
+  const set=(id,fn)=>{const e=document.getElementById(id); if(e)fn(e)};
+  set('pFill',e=>e.style.width=pct+'%');
+  set('ringFg',e=>e.setAttribute('stroke-dashoffset',RING*(1-pct/100)));
+  set('ringTx',e=>e.textContent=pct+'%');
+  set('pText',e=>e.textContent=list.length?`今日进度 ${pct}%`:'无硬性安排');
+  set('tMain',e=>e.innerHTML=list.length?`${dn}<small> / ${list.length} 已完成</small>`:'今天休息');
+  set('tCount',e=>e.textContent=list.length?`${dn}/${list.length}`:'');
+  set('tjNum',e=>e.innerHTML=`${dn}<span>/${list.length}</span>`);
+  const pc=document.querySelector('.daycol.today .tjpct'); if(pc) pc.textContent=pct+'%';
+}
+function delMy(k,t){
+  mine[k]=(mine[k]||[]).filter(x=>x.t!==t); save(K_MY,mine);
+  done[k]=(done[k]||[]).filter(x=>x!==t); save(K_DONE,done);
+  if(k===key(today)) renderTodayTasks(); else render();
+}
+function addTask(){
+  const el=document.getElementById('newTask'), v=el.value.trim();
+  if(!v)return; const k=key(today);
+  mine[k]=(mine[k]||[]).concat([{t:v,c:'my'}]); save(K_MY,mine);
+  el.value=''; toast('已加到今天'); renderTodayTasks();
+}
+function weekStart(d){const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));x.setHours(0,0,0,0);return x}
+function weekLabel(s){
+  const e=new Date(s);e.setDate(e.getDate()+6);
+  const mm=(m,d)=>m+1+'/'+d;
+  const containsToday = today>=s && today<=e;
+  let note;
+  if(containsToday) note='本周';
+  else if(s>='2026-08-31'&&s<='2026-09-06')note='上海，轻启动';
+  else if(s>='2026-09-07'&&s<='2026-09-13')note='上海 → 杭州';
+  else if(s>='2026-09-14'&&s<='2026-09-20')note='杭州，问教务处+倒排重修';
+  else if(s>='2026-09-21')note='杭州';
+  else note='休息';
+  return mm(s.getMonth(),s.getDate())+' – '+mm(e.getMonth(),e.getDate())+' · '+note;
+}
+function taskHTML(k,x){
+  const dd=isDone(k,x.t);
+  return `<div class="task${dd?' done':''}${x.anchor?' anchor':''}" data-t="${esc(x.t)}" onclick="toggle('${k}',${q(x.t)})">
+    <div class="cb">✓</div>
+    <div class="tt">${x.t}<span class="cat c-${x.c}">${CAT[x.c]||''}</span></div>
+    ${x.my?`<div class="del" onclick="event.stopPropagation();delMy('${k}',${q(x.t)})">×</div>`:''}
+  </div>`;
+}
+function readTag(x){
+  return `<div class="tg c-${x.c}">${x.t}<span class="cat c-${x.c}">${CAT[x.c]||''}</span></div>`;
+}
+function dayCol(d){
+  const k=key(d), isToday=k===key(today);
+  const isPast=d<today, isH=!!HOT[k];
+  const cls=['daycol']; if(isPast)cls.push('past'); if(isToday)cls.push('today'); if(isH)cls.push('hotday');
+  if(isToday){
+    const list=tasksOf(k), dn=list.filter(x=>isDone(k,x.t)).length;
+    const pct=list.length?Math.round(dn/list.length*100):0;
+    return `<div class="${cls.join(' ')}" data-k="${k}" onclick="backToToday()">
+      <div class="dhead">${WD[(d.getDay()+6)%7]}<b>${d.getMonth()+1}/${d.getDate()}</b><span class="todaytag">· 今天</span></div>
+      <div class="tjsum">
+        <div class="tjnum" id="tjNum">${dn}<span>/${list.length}</span></div>
+        <div class="tjpct">${pct}%</div>
+        <div class="tjhint">↑ 回打卡</div>
+      </div>
+    </div>`;
+  }
+  const ts=schedOnly(k);
+  return `<div class="${cls.join(' ')}" data-k="${k}">
+    <div class="dhead">${WD[(d.getDay()+6)%7]}<b>${d.getMonth()+1}/${d.getDate()}</b></div>
+    <div class="tg-list">${ts.map(readTag).join('')}</div>
+  </div>`;
+}
+function backToToday(){window.scrollTo({top:0,behavior:'smooth'})}
+function renderWeek(ws,elId,titleId){
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(ws);d.setDate(d.getDate()+i);days.push(d);}
+  const el=document.getElementById(elId);
+  if(el){
+    el.innerHTML=`<div class="days" id="days_${elId}">${days.map(d=>dayCol(d)).join('')}</div>`;
+    if(titleId)document.getElementById(titleId).textContent=weekLabel(ws);
+  }
+}
+/* 只重建今日打卡区（加/删任务时用），不动周网格，页面不会位移 */
+function renderTodayTasks(){
+  const k=key(today), list=tasksOf(k);
+  const box=document.getElementById('todayTasks');
+  if(!box)return;
+  box.innerHTML=list.length?list.map(x=>taskHTML(k,x)).join(''):'<div class="empty">今天没有安排</div>';
+  updateProgress();
+}
+/* 情境提示：按你的精力曲线，告诉「现在这个时段该干什么」 */
+function ctxHint(){
+  const h=new Date().getHours();
+  const slp=(key(new Date())==='2026-08-29')?'≤2:30（今日例外）':'≤2:00';
+  let t,sub;
+  if(h>=14&&h<18){t='精力高峰 — 现在适合啃硬骨头';sub='口译 / 重修 / 秋招网申 等高认知任务，排这一段';}
+  else if(h>=9&&h<14){t='上午低效时段 — 别硬啃难活';sub='只做健身 / 杂务 / 出行，硬任务留给下午';}
+  else if(h>=18&&h<23){t='晚间效率不错 — 可做硬任务';sub='但要在入睡锚点（'+slp+'）前 30min 收尾';}
+  else {t='该睡了 — 现在熬掉的是明天的执行力';sub='入睡锚点 '+slp+'，这是「好牌打烂」循环的起点';}
+  return `<b>${t}</b><span class="cx">${sub}</span>`;
+}
+/* Tab 切换：日程 / 关注 */
+function switchTab(t){
+  const isPlan=(t==='plan');
+  document.getElementById('tabPlan').style.display=isPlan?'block':'none';
+  document.getElementById('tabWatch').style.display=isPlan?'none':'block';
+  document.getElementById('tabBtnPlan').className='tab'+(isPlan?' active':'');
+  document.getElementById('tabBtnWatch').className='tab'+(isPlan?'':' active');
+  if(!isPlan) updateWatch();
+  try{localStorage.setItem('gk_tab',t)}catch(e){}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+/* 关注页倒计时：F1 蒙扎 9/4 开赛；LPL JDG vs WE 8/30 17:00 */
+function updateWatch(){
+  const now=new Date();
+  const f1=new Date(2026,8,4);            /* 9/4 蒙扎周末开赛 */
+  const lpl=new Date(2026,8,3);           /* 9/3 BLG vs WE（具体时间官方未公布，按天倒计时） */
+  const e1=document.getElementById('f1Cd');
+  if(e1) e1.textContent=Math.max(0,Math.ceil((f1-now)/864e5));
+  const e2=document.getElementById('lplCd');
+  if(e2) e2.textContent=Math.max(0,Math.ceil((lpl-now)/864e5));
+}
+/* F1 2026 剩余赛程（北京时间）— 与 FIA 官方当地时间逐场交叉验证 */
+const F1_RACES=[
+ {n:'意大利 · 蒙扎',d:'9/4–6',fer:1,fmt:'标准',note:'法拉利主场',s:[
+   ['周五 9/4','FP1 一练','18:30'],['周五 9/4','FP2 二练','22:00'],
+   ['周六 9/5','FP3 三练','18:30'],['周六 9/5','排位赛','22:00'],['周日 9/6','正赛','21:00']]},
+ {n:'西班牙 · 马德里',d:'9/11–13',fmt:'标准',note:'新赛道',s:[
+   ['周五 9/11','FP1 一练','19:30'],['周五 9/11','FP2 二练','23:00'],
+   ['周六 9/12','FP3 三练','18:30'],['周六 9/12','排位赛','22:00'],['周日 9/13','正赛','21:00']]},
+ {n:'阿塞拜疆 · 巴库',d:'9/24–26',fmt:'标准',note:'周四–周六',s:[
+   ['周四 9/24','FP1 一练','16:30'],['周四 9/24','FP2 二练','20:00'],
+   ['周五 9/25','FP3 三练','16:30'],['周五 9/25','排位赛','20:00'],['周六 9/26','正赛','19:00']]},
+ {n:'巴林 · 雪邦（改址）',d:'10/2–4',fmt:'标准',note:'改至马来西亚',s:[
+   ['周五 10/2','FP1 一练','12:30'],['周五 10/2','FP2 二练','16:00'],
+   ['周六 10/3','FP3 三练','12:30'],['周六 10/3','排位赛','16:00'],['周日 10/4','正赛','15:00']]},
+ {n:'新加坡 · 滨海湾',d:'10/9–11',fmt:'冲刺',note:'2026 最后一场冲刺',s:[
+   ['周五 10/9','FP1 一练','17:30'],['周五 10/9','冲刺排位赛','20:30'],
+   ['周六 10/10','冲刺赛','17:00'],['周六 10/10','排位赛','21:00'],['周日 10/11','正赛','20:00']]},
+ {n:'美国 · 奥斯汀',d:'10/23–25',fmt:'标准',note:'北京时间为深夜',s:[
+   ['周六 10/24','FP1 一练','01:30'],['周六 10/24','FP2 二练','05:00'],
+   ['周日 10/25','FP3 三练','01:30'],['周日 10/25','排位赛','05:00'],['周一 10/26','正赛','04:00']]},
+ {n:'墨西哥城',d:'10/30–11/1',fmt:'标准',note:'北京时间为深夜',s:[
+   ['周六 10/31','FP1 一练','02:30'],['周六 10/31','FP2 二练','06:00'],
+   ['周日 11/1','FP3 三练','01:30'],['周日 11/1','排位赛','05:00'],['周一 11/2','正赛','04:00']]},
+ {n:'巴西 · 圣保罗',d:'11/6–9',fmt:'标准',note:'北京时间为深夜',s:[
+   ['周五 11/6','FP1 一练','23:30'],['周六 11/7','FP2 二练','03:00'],
+   ['周六 11/7','FP3 三练','22:30'],['周日 11/8','排位赛','02:00'],['周一 11/9','正赛','01:00']]},
+ {n:'拉斯维加斯',d:'11/20–22',fmt:'标准',note:'夜赛，北京为上午',s:[
+   ['周五 11/20','FP1 一练','08:30'],['周五 11/20','FP2 二练','12:00'],
+   ['周六 11/21','FP3 三练','08:30'],['周六 11/21','排位赛','12:00'],['周日 11/22','正赛','12:00']]},
+ {n:'卡塔尔 · 卢塞尔',d:'11/27–30',fmt:'标准',note:'夜赛',s:[
+   ['周五 11/27','FP1 一练','21:30'],['周六 11/28','FP2 二练','01:00'],
+   ['周六 11/28','FP3 三练','22:30'],['周日 11/29','排位赛','02:00'],['周一 11/30','正赛','00:00']]},
+ {n:'阿布扎比 · 亚斯码头',d:'12/4–6',fmt:'标准',note:'收官 · 夜赛',s:[
+   ['周五 12/4','FP1 一练','17:30'],['周五 12/4','FP2 二练','21:00'],
+   ['周六 12/5','FP3 三练','18:30'],['周六 12/5','排位赛','22:00'],['周日 12/6','正赛','21:00']]}
+];
+function sessHTML(s){
+  return s.map(function(x){
+    const isR=x[1].indexOf('正赛')>-1, isS=x[1].indexOf('冲刺')>-1, isQ=x[1].indexOf('排位')>-1;
+    const k=isR?' race':(isS?' sprint':(isQ?' qual':''));
+    return '<div class="ss'+k+'"><span class="ss-d">'+x[0]+'</span>'+
+           '<span class="ss-n">'+x[1]+'</span><span class="ss-t">'+x[2]+'</span></div>';
+  }).join('');
+}
+function renderF1(){
+  const nx=document.getElementById('f1NextSess');
+  if(nx) nx.innerHTML=sessHTML(F1_RACES[0].s);
+  const box=document.getElementById('f1List');
+  if(!box) return;
+  box.innerHTML=F1_RACES.map(function(r,i){
+    const fer=r.fer?' fer':'';
+    const sp=r.fmt==='冲刺'?'<span class="fmt sprint">冲刺周末</span>':'<span class="fmt">标准</span>';
+    const nt=r.note?'<span class="rn">'+r.note+'</span>':'';
+    return '<details class="race'+fer+'"'+(i===0?' open':'')+'>'+
+      '<summary><span class="rd">'+r.d+'</span><span class="rname">'+r.n+sp+nt+'</span></summary>'+
+      '<div class="sess">'+sessHTML(r.s)+'</div></details>';
+  }).join('');
+}
+renderF1();
+/* 资讯：读取脚本生成的 news.json */
+let NEWS=null;
+async function loadNews(){
+  const box=document.getElementById('newsList');
+  try{
+    const r=await fetch('./news.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    NEWS=await r.json();
+    renderNews();
+  }catch(e){
+    if(box) box.innerHTML='<div class="empty">热搜暂不可用（'+e.message+'）<br>先用下方源入口</div>';
+    const t=document.getElementById('newsTime'); if(t) t.textContent='离线';
+  }
+}
+function renderNews(key){
+  const d=NEWS; if(!d) return;
+  const tabs=document.getElementById('srcTabs'), box=document.getElementById('newsList');
+  const time=document.getElementById('newsTime'), note=document.getElementById('newsNote');
+  const avail=d.sources.filter(s=>s.ok);
+  if(time) time.textContent='更新 '+d.updated.slice(5)+' · '+avail.length+'/'+d.sources.length+' 源';
+  if(tabs){
+    tabs.innerHTML=d.sources.map(s=>{
+      const on=((key&&key===s.key)||(!key&&avail[0]&&avail[0].key===s.key))?' on':'';
+      return `<button class="stab${s.ok?'':' dis'}${on}" onclick="renderNews('${s.key}')">${s.name}${s.ok?'':' ✕'}</button>`;
+    }).join('');
+  }
+  const cur=d.sources.find(s=>s.ok&&(key?s.key===key:true))||avail[0];
+  if(!cur){ if(box) box.innerHTML='<div class="empty">暂无可用源</div>'; return; }
+  if(note) note.innerHTML=cur.cached
+    ? `该源本次被限（${cur.err||'反爬'}）→ 显示<b>上次成功结果</b>`
+    : `共 ${cur.count} 条 · 点击直达原文`;
+  if(box) box.innerHTML=cur.items.map((it,i)=>
+    `<a class="hotitem" href="${it.u}" target="_blank" rel="noopener">
+      <span class="hi-n">${i+1}</span>
+      <span class="hi-t">${esc(it.t)}</span>
+      ${it.time?`<span class="hi-m">${it.time}</span>`:''}
+      <span class="hi-go">›</span>
+    </a>`).join('');
+}
+
+function render(){
+  const tk=key(today);
+  const T=(m,d)=>new Date(2026,m-1,d);
+  const diff=t=>Math.max(0,Math.ceil((t-today)/864e5));
+  document.getElementById('d1').textContent=diff(T(9,14));
+  document.getElementById('d2').textContent=diff(T(9,9));
+
+  /* 今日卡片 */
+  document.getElementById('tDate').textContent=`${today.getMonth()+1}月${today.getDate()}日 · 周${WD[(today.getDay()+6)%7]}`;
+  const tL=tasksOf(tk), tD=doneCount(tk), tP=tL.length?Math.round(tD/tL.length*100):0;
+  document.getElementById('tMain').innerHTML=tL.length?`${tD}<small> / ${tL.length} 已完成</small>`:'今天休息';
+  document.getElementById('todayBox').className='today'+(HOT[tk]?' hot':'');
+  document.getElementById('pFill').style.width=tP+'%';
+  document.getElementById('ringFg').setAttribute('stroke-dashoffset', RING*(1-tP/100));
+  document.getElementById('ringTx').textContent=tP+'%';
+  document.getElementById('pText').textContent=tL.length?`今日进度 ${tP}%`:'无硬性安排';
+  const anch=anchorsFor(tk).map(a=>a.t.replace(/（.*?）/g,'')).join(' · ');
+  document.getElementById('anchorLine').innerHTML=`保底做到即达标：<b>${anch}</b>`;
+
+  renderTodayTasks();
+  const ch=document.getElementById('ctxHint'); if(ch) ch.innerHTML=ctxHint();
+  updateWatch();
+
+  /* 周视图 */
+  const startW=weekStart(today);
+  renderWeek(startW,'week0','w1Range');
+  const w2=new Date(startW); w2.setDate(w2.getDate()+7);
+  renderWeek(w2,'week1','w2Range');
+
+  /* 额外周 */
+  const extra=document.getElementById('extraWeeks');
+  let eh='';
+  for(let i=0;i<extraWeeks;i++){
+    const ws=new Date(startW); ws.setDate(ws.getDate()+14+i*7);
+    const id='week'+(i+2);
+    eh+=`<h2>第 ${i+3} 周 <em>${weekLabel(ws)}</em></h2><div class="week" id="${id}"></div>`;
+  }
+  extra.innerHTML=eh;
+  for(let i=0;i<extraWeeks;i++){
+    const ws=new Date(startW); ws.setDate(ws.getDate()+14+i*7);
+    renderWeek(ws,'week'+(i+2));
+  }
+
+  /* 按钮 */
+  const mb=document.getElementById('moreBtn');
+  mb.textContent=extraWeeks?'收起多余周':'展开更多周';
+  mb.style.color=extraWeeks?'#F87171':'#4A9EFF';
+  mb.style.borderColor=extraWeeks?'rgba(248,113,113,.4)':'var(--bd)';
+
+  /* 滚动到今天：仅首次加载执行一次。勾选后不再滚动 —— 这是「点一下跳一下」的根因 */
+  if(window.__scrolledToToday!==true){
+    window.__scrolledToToday=true;
+    requestAnimationFrame(()=>{
+      const box=document.getElementById('days_week0');
+      const todayCol=box&&box.querySelector('.today');
+      if(todayCol) todayCol.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+    });
+  }
+
+  /* 月历折叠 */
+  document.getElementById('calTitle').textContent=`${view.getFullYear()}年 ${CN[view.getMonth()]}`;
+  document.getElementById('wdRow').innerHTML=WD.map(w=>`<div class="wd">${w}</div>`).join('');
+  const y=view.getFullYear(), m=view.getMonth();
+  const start=(new Date(y,m,1).getDay()+6)%7, days=new Date(y,m+1,0).getDate();
+  let h='';
+  for(let i=0;i<start;i++)h+='<div class="cell out"></div>';
+  for(let d=1;d<=days;d++){
+    const k=key(new Date(y,m,d)), n=tasksOf(k).length;
+    const cls=['cell'];
+    if(n)cls.push('has');
+    if(HOT[k])cls.push('hot');
+    if(k===tk)cls.push('today');
+    h+=`<div class="${cls.join(' ')}" onclick="pick('${k}')">${d}${n?`<span class="cnt">${n}</span>`:''}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML=h;
+  const ml=M[`${y}-${m+1}`];
+  document.getElementById('mline').innerHTML=ml
+    ?`<b>本月主线</b>${ml.map(x=>`<div>· ${x}</div>`).join('')}`
+    :`<b>本月主线</b><div>· 暂无安排</div>`;
+}
+function moreWeeks(){
+  if(extraWeeks){extraWeeks=0;render();window.scrollTo({top:0,behavior:'smooth'});}
+  else{extraWeeks=Math.min(extraWeeks+2,MAXWEEKS-2);render();}
+}
+function pick(k){
+  const p=k.split('-');
+  view=new Date(+p[0],+p[1]-1,1);
+  const target=new Date(+p[0],+p[1]-1,+p[2]);
+  const wn=Math.ceil((target-weekStart(today))/(7*864e5));
+  if(wn>=2){
+    const need=wn-1;
+    if(need>extraWeeks){extraWeeks=Math.min(need,MAXWEEKS-2);render();}
+  }
+  setTimeout(()=>{
+    const col=document.querySelector(`.daycol[data-k="${k}"]`);
+    if(col)col.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+  },50);
+}
+function mv(n){view=new Date(view.getFullYear(),view.getMonth()+n,1);render()}
+function goToday(){view=new Date(today.getFullYear(),today.getMonth(),1);extraWeeks=0;render();
+  window.scrollTo({top:0,behavior:'smooth'})}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');
+  clearTimeout(window._t);window._t=setTimeout(()=>e.classList.remove('show'),1500)}
+function cp(t){
+  const ok=()=>toast('已复制');
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(ok,()=>fb(t,ok))}else fb(t,ok);
+}
+function fb(t,ok){const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';
+  document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(e){}document.body.removeChild(a)}
+
+document.getElementById('newTask').addEventListener('keydown',e=>{if(e.key==='Enter')addTask()});
+
+let dp=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;
+  const b=document.getElementById('install');b.style.display='block';
+  b.onclick=()=>{b.style.display='none';dp.prompt();dp.userChoice.then(()=>{dp=null})}});
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(sessionStorage.getItem('gk_sw'))return;
+    sessionStorage.setItem('gk_sw','1'); location.reload();
+  });
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+render();
+/* 资讯/热搜模块已于 2026-08-29 按 Gary 要求暂时移除（热搜榜价值低）。
+   恢复方法：① 取消下一行注释 ② 把「资讯」HTML 区块加回 tabWatch 内（脚本 fetch_hot.py 与 news.json 均保留） */
+// loadNews();   /* 读取热搜 news.json */
+/* 恢复上次停留的 Tab（不触发滚动） */
+try{
+  if(localStorage.getItem('gk_tab')==='watch'){
+    document.getElementById('tabPlan').style.display='none';
+    document.getElementById('tabWatch').style.display='block';
+    document.getElementById('tabBtnPlan').className='tab';
+    document.getElementById('tabBtnWatch').className='tab active';
+  }
+}catch(e){}
+</script>
+</body>
+</html>
