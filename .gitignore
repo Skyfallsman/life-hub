@@ -1,0 +1,3 @@
+# GitHub Actions 工作流需要 token 具备 `workflow` scope 才能推送。
+# 当前 token 只有 repo，故暂时不纳入版本控制；文件保留在本地 life-hub/.github/ 备用。
+.github/
