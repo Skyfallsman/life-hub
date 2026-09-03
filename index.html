@@ -143,6 +143,28 @@
   .add input::placeholder{color:var(--mut2)}
   .add button{min-height:46px;padding:0 18px;background:var(--card);border:1px solid var(--bd);
     border-radius:13px;color:var(--green);font-size:13.5px;font-weight:700;cursor:pointer}
+  /* ===== 番茄钟 ===== */
+  .pomo{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:15px 14px 13px;margin-bottom:10px}
+  .pmodes{display:flex;gap:7px;margin-bottom:13px}
+  .pmode{flex:1;background:var(--card2);border:1px solid var(--bd2);border-radius:11px;
+    padding:9px 4px;color:var(--mut);font-size:16px;font-weight:800;cursor:pointer;
+    line-height:1.15;transition:all .18s;font-family:inherit}
+  .pmode small{display:block;font-size:9.5px;font-weight:600;margin-top:3px;opacity:.85;letter-spacing:.02em}
+  .pmode.active{background:linear-gradient(155deg,rgba(52,211,153,.18),transparent);border-color:var(--green);color:var(--green)}
+  .pring{position:relative;width:150px;height:150px;margin:0 auto 13px}
+  .pring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .pr-bg{stroke:var(--bd)}
+  .pr-fg{stroke:var(--green);stroke-linecap:round;transition:stroke-dashoffset .35s linear,stroke .25s}
+  .pomo.brk .pr-fg{stroke:var(--blue)}
+  .prtx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .prtime{font-size:33px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .prlab{font-size:11px;color:var(--mut);margin-top:2px}
+  .pbtns{display:flex;gap:8px}
+  .pbtn{flex:1;min-height:46px;background:var(--card2);border:1px solid var(--bd2);border-radius:13px;
+    color:var(--tx);font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .pbtn.go{background:linear-gradient(155deg,rgba(52,211,153,.22),rgba(52,211,153,.06));border-color:var(--green);color:var(--green)}
+  .pbtn.ico{flex:0 0 50px;font-size:17px}
+  .ptip{font-size:10.5px;color:var(--mut2);line-height:1.6;margin-top:10px;text-align:center}
 
   .morebar{display:flex;gap:8px;margin-top:4px}
   .morebtn{flex:1;min-height:46px;background:var(--card);border:1px solid var(--bd);border-radius:13px;
@@ -378,6 +400,32 @@
 <div class="add">
   <input id="newTask" placeholder="给今天加件事…" maxlength="60">
   <button onclick="addTask()">加</button>
+</div>
+
+<h2>专注 · 番茄钟 <em id="pomoCount">今日 0 个</em></h2>
+<div class="pomo">
+  <div class="pmodes">
+    <button class="pmode active" onclick="setPomo(25,5,this)">25<small>/5 背诵·Anki</small></button>
+    <button class="pmode" onclick="setPomo(50,10,this)">50<small>/10 笔译·视译</small></button>
+    <button class="pmode" onclick="setPomo(90,20,this)">90<small>/20 套题·模考</small></button>
+  </div>
+  <div class="pring">
+    <svg viewBox="0 0 120 120">
+      <circle class="pr-bg" cx="60" cy="60" r="52" fill="none" stroke-width="7"/>
+      <circle class="pr-fg" id="prFg" cx="60" cy="60" r="52" fill="none" stroke-width="7"
+              stroke-dasharray="326.7" stroke-dashoffset="0"/>
+    </svg>
+    <div class="prtx">
+      <div class="prtime" id="prTime">25:00</div>
+      <div class="prlab" id="prLab">专注</div>
+    </div>
+  </div>
+  <div class="pbtns">
+    <button class="pbtn go" id="pStart" onclick="pomoToggle()">开始</button>
+    <button class="pbtn" onclick="pomoReset()">重置</button>
+    <button class="pbtn ico" id="pBell" onclick="pomoBell()" title="提示音">🔔</button>
+  </div>
+  <div class="ptip" id="pTip">选 25 分钟：背诵 + Anki 自测（高频切换，适合语料记忆）</div>
 </div>
 
 <h2>本周 <em id="w1Range">—</em></h2>
@@ -659,6 +707,103 @@ function addTask(){
   mine[k]=(mine[k]||[]).concat([{t:v,c:'my'}]); save(K_MY,mine);
   el.value=''; toast('已加到今天'); renderTodayTasks();
 }
+
+/* ================= 番茄钟 =================
+   三档时长对应三类任务（顶尖学习理论的实践映射）：
+   25/5  → 背诵 + Anki 自测（提取练习，高切换频率，记忆语料最高效）
+   50/10 → 笔译 + 视译 + 复述（深层加工，需要连续上下文，不适合切碎）
+   90/20 → 套题模拟（贴合超日节律 ultradian rhythm，模拟真实考试强度） */
+const K_POMO='gk_pomo_v1';
+const POMO_TIP={
+ '25':'25 分钟：背诵 + Anki 自测。合上材料主动回忆，别重读（提取练习 d=0.50）',
+ '50':'50 分钟：笔译 + 视译 + 无笔记复述。连续上下文，不要切碎',
+ '90':'90 分钟：整套交替传译模拟。贴合超日节律，练到考试强度'
+};
+let pomo={min:25,brk:5,left:25*60,run:false,phase:'work',tid:null,
+          log:load(K_POMO,{d:'',n:0}),muted:false};
+function pomoTodayCount(){
+  const t=key(new Date());
+  if(pomo.log.d!==t){pomo.log={d:t,n:0};save(K_POMO,pomo.log);}
+  return pomo.log.n;
+}
+function pomoPaint(){
+  const total=(pomo.phase==='work'?pomo.min:pomo.brk)*60;
+  const C=326.7, off=C*(1-pomo.left/total);
+  const s=document.getElementById('prFg'); if(s) s.setAttribute('stroke-dashoffset',off.toFixed(1));
+  const m=Math.floor(pomo.left/60), ss=pomo.left%60;
+  const t=document.getElementById('prTime'); if(t) t.textContent=m+':'+(ss<10?'0':'')+ss;
+  const l=document.getElementById('prLab');
+  if(l) l.textContent=pomo.phase==='work'?'专注 · '+pomo.min+'min':'休息 · '+pomo.brk+'min';
+  const b=document.getElementById('pStart'); if(b) b.textContent=pomo.run?'暂停':'开始';
+  const box=document.querySelector('.pomo'); if(box) box.classList.toggle('brk',pomo.phase!=='work');
+  const c=document.getElementById('pomoCount'); if(c) c.textContent='今日 '+pomoTodayCount()+' 个';
+}
+function setPomo(m,b,el){
+  pomo.min=m; pomo.brk=b; pomo.phase='work'; pomo.left=m*60; pomoStop();
+  document.querySelectorAll('.pmode').forEach(x=>x.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const tp=document.getElementById('pTip'); if(tp) tp.textContent=POMO_TIP[String(m)]||'';
+  pomoPaint();
+}
+function pomoToggle(){ pomo.run?pomoStop():pomoStart(); }
+function pomoStart(){
+  pomo.run=true;
+  pomo.tid=setInterval(()=>{
+    pomo.left--;
+    if(pomo.left<=0){ pomoDone(); return; }
+    pomoPaint();
+  },1000);
+  pomoPaint();
+}
+function pomoStop(){ pomo.run=false; if(pomo.tid){clearInterval(pomo.tid);pomo.tid=null;} pomoPaint(); }
+function pomoReset(){
+  pomoStop(); pomo.phase='work'; pomo.left=pomo.min*60; pomoPaint();
+}
+function pomoDone(){
+  pomoStop();
+  if(pomo.phase==='work'){
+    pomo.phase='brk'; pomo.left=pomo.brk*60;
+    pomoTodayCount(); pomo.log.n++; save(K_POMO,pomo.log);
+    beep(3); notify('🍅 专注完成','已累计 '+pomo.log.n+' 个 · 去休息 '+pomo.brk+' 分钟');
+  }else{
+    pomo.phase='work'; pomo.left=pomo.min*60;
+    beep(1); notify('休息结束','回到专注 · '+pomo.min+' 分钟');
+  }
+  pomoPaint();
+}
+function pomoBell(){
+  pomo.muted=!pomo.muted;
+  const b=document.getElementById('pBell'); if(b) b.textContent=pomo.muted?'🔕':'🔔';
+  toast(pomo.muted?'已静音':'提示音开');
+}
+/* Web Audio 直接合成提示音，无需外部音频文件 */
+function beep(n){
+  if(pomo.muted) return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    const ctx=new AC();
+    for(let i=0;i<(n||3);i++){
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type='sine'; o.frequency.value=i===0?880:660;
+      const t=ctx.currentTime+i*0.38;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.32,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.26);
+      o.start(t); o.stop(t+0.3);
+    }
+    setTimeout(()=>{try{ctx.close()}catch(e){}},2500);
+  }catch(e){}
+}
+/* 桌面通知：首次完成时才会请求权限，不打扰 */
+function notify(title,body){
+  try{
+    if(!('Notification' in window)) return;
+    if(Notification.permission==='granted'){ new Notification(title,{body:body}); return; }
+    if(Notification.permission==='default') Notification.requestPermission();
+  }catch(e){}
+}
+
 function weekStart(d){const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));x.setHours(0,0,0,0);return x}
 function weekLabel(s){
   const e=new Date(s);e.setDate(e.getDate()+6);
@@ -979,6 +1124,7 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 render();
+pomoPaint();   /* 番茄钟初始化 */
 /* 资讯/热搜模块已于 2026-08-29 按 Gary 要求暂时移除（热搜榜价值低）。
    恢复方法：① 取消下一行注释 ② 把「资讯」HTML 区块加回 tabWatch 内（脚本 fetch_hot.py 与 news.json 均保留） */
 // loadNews();   /* 读取热搜 news.json */
