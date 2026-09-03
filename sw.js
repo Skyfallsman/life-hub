@@ -5,7 +5,7 @@
    - 静态资源（图标/manifest）→ stale-while-revalidate，秒开。
    - activate 时 skipWaiting + clients.claim；页面侧监听 controllerchange 自动 reload 一次。
    => 以后更新内容：重新部署即可，用户无需手动刷新/清缓存。 */
-const CACHE = 'gary-schedule-v27';
+const CACHE = 'gary-schedule-v28';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
