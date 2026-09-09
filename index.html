@@ -396,7 +396,7 @@
       <div class="pbar"><div class="pfill" id="pFill"></div></div>
       <div class="ptext">
         <span id="pText">—</span>
-        <span class="cds"><span>口译 <b class="c-red" id="d1">—</b></span><span>科三 <b class="c-orange" id="d2">—</b></span></span>
+        <span class="cds"><span>口译 <b class="c-red" id="d1">—</b></span><span>驾照 <b class="c-orange" id="d2">—</b></span></span>
       </div>
     </div>
     <svg class="ring" viewBox="0 0 58 58">
@@ -610,7 +610,7 @@ const S={
 '2026-09-05':[{t:'【听辨】阿→中 6.docx 50min',c:'ar'},{t:'【自测】Anki 双向 25min',c:'ar'},{t:'【套话】中→阿高频模块 25min',c:'ar'},{t:'周复盘',c:'rv'}],
 '2026-09-06':[{t:'【听辨】阿→中 9.docx 50min',c:'ar'},{t:'【自测】Anki 双向 25min',c:'ar'},{t:'科三 · 考前再去一次（教练说一次即可）',c:'ks'}],
 '2026-09-07':[{t:'★ 科三 · 模拟考',c:'ks'},{t:'【回炉】阿→中 5/6/9 只检索不重学 40min',c:'ar'}],
-'2026-09-08':[{t:'★ 科三 考试 上午（教练评估：基本没问题）',c:'hot'},{t:'B维持 · 音频泛听 + Anki 1h（不学新料）',c:'ar'}],
+'2026-09-08':[{t:'★ 科三（上午·已过）→ 科四（已过）→ 下午拿照 ✓ 驾照到手',c:'hot'},{t:'B维持 · 音频泛听 + Anki 1h（不学新料）',c:'ar'}],
 '2026-09-09':[{t:'B维持 · 音频泛听 + Anki 1h（不学新料）',c:'ar'},{t:'饭局（上海 · 控主食忌宵夜）',c:'rv'}],
 '2026-09-10':[{t:'★ 赴杭',c:'rv'},{t:'杭州安顿 + 水课预备',c:'rv'},{t:'B维持 · 音频泛听 1h',c:'ar'}],
 '2026-09-11':[{t:'【模考】交传演练 2 套（模考版音频）',c:'ar'},{t:'【笔记】实战复盘',c:'ar'}],
@@ -1025,13 +1025,13 @@ function render(){
   const T=(m,d)=>new Date(2026,m-1,d);
   const diff=t=>Math.max(0,Math.ceil((t-today)/864e5));
   /* 倒计时：过期后显示「已结束」而不是 0 天（科三 9/8 已考完，显示 0 会误导） */
-  const dd=(id,dt)=>{const e=document.getElementById(id); if(!e)return;
+  const dd=(id,dt,doneTxt)=>{const e=document.getElementById(id); if(!e)return;
     const days=Math.ceil((dt-today)/864e5);
-    e.textContent = days>0 ? days+' 天' : (days===0 ? '就是今天' : '已结束');
+    e.textContent = days>0 ? days+' 天' : (days===0 ? '就是今天' : (doneTxt||'已结束'));
     if(days<0) e.classList.remove('c-red','c-orange'), e.classList.add('c-mut');
   };
-  dd('d1',T(9,14));   /* 阿语口译考试 */
-  dd('d2',T(9,8));    /* 科三考试（9/8 上午，已考完） */
+  dd('d1',T(9,14));           /* 阿语口译考试 */
+  dd('d2',T(9,8),'✓ 已拿照'); /* 科三/科四 9/8 一次过，驾照到手 */
 
   /* 今日卡片 */
   document.getElementById('tDate').textContent=`${today.getMonth()+1}月${today.getDate()}日 · 周${WD[(today.getDay()+6)%7]}`;
