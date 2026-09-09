@@ -65,6 +65,7 @@
     background:linear-gradient(90deg,var(--green),var(--blue));box-shadow:0 0 12px rgba(52,211,153,.45)}
   .ptext{font-size:11.5px;color:var(--mut);margin-top:7px;display:flex;gap:14px;flex-wrap:wrap}
   .ptext b{color:var(--tx);font-weight:700}
+  .c-mut{color:var(--mut)}
   .c-red{color:var(--red)}.c-orange{color:var(--orange)}
   .ring{width:58px;height:58px;flex-shrink:0;transform:rotate(-90deg)}
   .ring-bg{stroke:rgba(255,255,255,.08)}
@@ -395,7 +396,7 @@
       <div class="pbar"><div class="pfill" id="pFill"></div></div>
       <div class="ptext">
         <span id="pText">—</span>
-        <span class="cds"><span>口译 <b class="c-red" id="d1">—</b>天</span><span>科三 <b class="c-orange" id="d2">—</b>天</span></span>
+        <span class="cds"><span>口译 <b class="c-red" id="d1">—</b></span><span>科三 <b class="c-orange" id="d2">—</b></span></span>
       </div>
     </div>
     <svg class="ring" viewBox="0 0 58 58">
@@ -1023,8 +1024,14 @@ function render(){
   const tk=key(today);
   const T=(m,d)=>new Date(2026,m-1,d);
   const diff=t=>Math.max(0,Math.ceil((t-today)/864e5));
-  document.getElementById('d1').textContent=diff(T(9,14));
-  document.getElementById('d2').textContent=diff(T(9,9));
+  /* 倒计时：过期后显示「已结束」而不是 0 天（科三 9/8 已考完，显示 0 会误导） */
+  const dd=(id,dt)=>{const e=document.getElementById(id); if(!e)return;
+    const days=Math.ceil((dt-today)/864e5);
+    e.textContent = days>0 ? days+' 天' : (days===0 ? '就是今天' : '已结束');
+    if(days<0) e.classList.remove('c-red','c-orange'), e.classList.add('c-mut');
+  };
+  dd('d1',T(9,14));   /* 阿语口译考试 */
+  dd('d2',T(9,8));    /* 科三考试（9/8 上午，已考完） */
 
   /* 今日卡片 */
   document.getElementById('tDate').textContent=`${today.getMonth()+1}月${today.getDate()}日 · 周${WD[(today.getDay()+6)%7]}`;
