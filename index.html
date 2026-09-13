@@ -923,11 +923,18 @@ function f1Range(d){
   else { d2=Number(tail[0]); m2=(d2<d1)?m1+1:m1; }   /* 跨月，如 10/30–11/1 */
   return {s:new Date(2026,m1-1,d1), e:new Date(2026,m2-1,d2,23,59,59)};
 }
+/* 当前/下一站的下标（赛季结束则停在最后一站）
+   ⚠ 以前 updateWatch 和 renderF1 各自硬编码，renderF1 直接用 F1_RACES[0]，
+   导致旁边的场次列表永远显示蒙扎（9/5 排位、9/6 正赛）。统一走这里。 */
+function f1Idx(now){
+  const t=now||new Date();
+  const i=F1_RACES.findIndex(r=>f1Range(r.d).e>=t);
+  return i<0 ? F1_RACES.length-1 : i;
+}
 function updateWatch(){
   const now=new Date();
   /* —— F1：自动定位本站/下一站 —— */
-  let idx=F1_RACES.findIndex(r=>f1Range(r.d).e>=now);
-  if(idx<0) idx=F1_RACES.length-1;          /* 赛季结束则停在最后一站 */
+  const idx=f1Idx(now);
   const r=F1_RACES[idx], rg=f1Range(r.d);
   const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
   set('f1Lab', (rg.s<=now&&now<=rg.e ? '本站进行中' : '下一站')
@@ -992,15 +999,17 @@ function sessHTML(s){
   }).join('');
 }
 function renderF1(){
+  /* ⚠ 用 f1Idx() 定位当前站，不再写死 F1_RACES[0]（那会永远显示蒙扎） */
+  const cur=f1Idx();
   const nx=document.getElementById('f1NextSess');
-  if(nx) nx.innerHTML=sessHTML(F1_RACES[0].s);
+  if(nx) nx.innerHTML=sessHTML(F1_RACES[cur].s);
   const box=document.getElementById('f1List');
   if(!box) return;
   box.innerHTML=F1_RACES.map(function(r,i){
     const fer=r.fer?' fer':'';
     const sp=r.fmt==='冲刺'?'<span class="fmt sprint">冲刺周末</span>':'<span class="fmt">标准</span>';
     const nt=r.note?'<span class="rn">'+r.note+'</span>':'';
-    return '<details class="race'+fer+'"'+(i===0?' open':'')+'>'+
+    return '<details class="race'+fer+'"'+(i===cur?' open':'')+'>'+
       '<summary><span class="rd">'+r.d+'</span><span class="rname">'+r.n+sp+nt+'</span></summary>'+
       '<div class="sess">'+sessHTML(r.s)+'</div></details>';
   }).join('');
